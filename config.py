@@ -1,0 +1,61 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # загружает переменные из файла .env
+
+TOKEN = os.getenv('DISCORD_TOKEN')
+# ... остальные настройки ...
+# ------------------ ID каналов ------------------
+WELCOME_CHANNEL_ID = 1476263726217822262          # канал для приветствий
+LOG_CHANNEL_ID = 1476263725735346185               # канал для логов заходов
+REQUEST_CHANNEL_ID = 1476263728503717906           # канал для заявок (входящие)
+ACCEPTED_CHANNEL_ID = 1476263728503717907          # канал для принятых заявок
+REJECTED_CHANNEL_ID = 1476263729007165712          # канал для отклонённых заявок
+BLACKLIST_LOG_CHANNEL_ID = 1478063186434588823     # канал для логов чёрного списка
+BLACKLIST_PANEL_CHANNEL_ID = 1476263729497636915   # канал с панелью управления ЧС
+APPLICATION_BUTTON_CHANNEL_ID = 1476263726217822263 # канал с кнопкой подачи заявки
+PORTFOLIO_CREATION_CHANNEL_ID = 1476263727031386162 # канал с кнопкой создания портфеля
+RESULTS_CHANNEL_ID = 1476263726217822264  # ID канала для итогов заявок
+AFK_LOG_CHANNEL_ID = 1476263725735346184   # канал для логов AFK
+AFK_PANEL_CHANNEL_ID = 1476263727031386164 # канал с панелью AFK
+VACATION_LOG_CHANNEL_ID = 1476263725735346183  # канал для логов отпусков
+VACATION_PANEL_CHANNEL_ID = 1476263727031386163  # канал с панелью отпусков
+GREEN_REQUESTS_CHANNEL_ID = 1476263727031386170
+GREEN_LOG_CHANNEL_ID = 1476263725735346182
+
+# ------------------ ID ролей ------------------
+ROLE_OZON = 1476263724997148786
+ROLE_GUEST = 1476263724997148785
+ROLE_FAMQ = 1476263724997148788
+ROLE_ACADEMY = 1476263724997148791
+ROLE_MODER = 1476263725009866808
+INVITER_ROLE_ID = 1476263725009866806
+LEADER_ROLE_ID = 1476263725026770956
+DEPUTY_LEADER_ROLE_ID = 1476263725026770955
+VACATION_ROLE_ID = 1476263724997148787   # ID роли, выдаваемой в отпуске
+CURATOR_ROLE_ID = 1476263724951142596   # ID роли куратора
+
+
+# Роли для рангов (портфели)
+ACADEMY_ROLE_ID = 1476263724997148791
+REED_ROLE_ID = 1476263725009866804
+MAIN_ROLE_ID = 1476263725009866805
+HIGH_ROLE_ID = 1476263725009866808
+
+# ------------------ ID категорий (портфели) ------------------
+ACADEMY_CATEGORY_ID = 1476263730579771510
+REED_CATEGORY_ID = 1476263730579771508
+MAIN_CATEGORY_ID = 1476263729954947143
+HIGH_CATEGORY_ID = 1476263730361925813
+
+# ------------------ Прочее ------------------
+APPLICATION_BANNER_URL = "https://cdn.discordapp.com/attachments/1476263725735346179/1476995652079845447/image.png?ex=69a326e4&is=69a1d564&hm=2de1512ce783425de92c134e30b5b60f7a4844802264f5b8d571793e81573691&"  # баннер для кнопки заявки
+VOICE_CHANNEL_ID = 1476263726217822265                     # голосовой канал для обзвона
+
+# Роли, имеющие доступ ко всем портфелям (высокие + лидеры)
+PORTFOLIO_ACCESS_ROLES = [
+    HIGH_ROLE_ID,
+    MAIN_ROLE_ID,
+    LEADER_ROLE_ID,
+    DEPUTY_LEADER_ROLE_ID
+]
