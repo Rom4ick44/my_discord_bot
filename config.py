@@ -57,8 +57,8 @@ VOICE_CHANNEL_ID = 1472308376045228275                     # голосовой 
 
 
 # Telegram (если используете)
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')  # или вставьте токен строкой
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')      # например, -1001234567890
+TG_BOT_TOKEN = os.getenv('TG_BOT_TOKEN')
+TG_CHAT_ID = os.getenv('TG_CHAT_ID')    # например, -1001234567890
 
 
 # Роли, имеющие доступ ко всем портфелям (высокие + лидеры)

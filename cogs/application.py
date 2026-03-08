@@ -13,7 +13,8 @@ from config import (
     APPLICATION_BUTTON_CHANNEL_ID, APPLICATION_BANNER_URL, VOICE_CHANNEL_ID,
     ROLE_OZON, ROLE_GUEST, ROLE_FAMQ, ROLE_ACADEMY,
     INVITER_ROLE_ID, LEADER_ROLE_ID, DEPUTY_LEADER_ROLE_ID,
-    EMOJI_ACCEPT, EMOJI_REJECT, EMOJI_CALL
+    EMOJI_ACCEPT, EMOJI_REJECT, EMOJI_CALL,
+    TG_BOT_TOKEN, TG_CHAT_ID  # новые имена
 )
 import database as db
 
@@ -148,10 +149,8 @@ class ApplicationModal(Modal, title="Заявка на вступление"):
 
         await interaction.response.send_message("✅ Заявка отправлена!", ephemeral=True)
 
-        # Telegram уведомление
-        TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-        TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-        if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
+        # Telegram уведомление (используем новые имена переменных)
+        if TG_BOT_TOKEN and TG_CHAT_ID:
             try:
                 answers_short = answers[:3]
                 answers_text = "\n".join([f"{i+1}. {a}" for i, a in enumerate(answers_short)])
@@ -162,9 +161,9 @@ class ApplicationModal(Modal, title="Заявка на вступление"):
                     f"<b>Ответы:</b>\n{answers_text}\n"
                     f"<b>Ссылка:</b> {msg.jump_url}"
                 )
-                url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+                url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
                 payload = {
-                    'chat_id': TELEGRAM_CHAT_ID,
+                    'chat_id': TG_CHAT_ID,
                     'text': text,
                     'parse_mode': 'HTML'
                 }
