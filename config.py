@@ -1,5 +1,5 @@
-# ------------------ Токен Discord (вставьте свой) ------------------
-TOKEN = "MTQ3NjQ0ODQ1OTk0MTg3MTcyOA.GQ_INi.FDmv3pfAevuk0F1MRBipgdk0PUk4yCYBdLC8JU"
+import os
+TOKEN = os.getenv('DISCORD_TOKEN')
 
 # ------------------ ID каналов ------------------
 WELCOME_CHANNEL_ID = 1469706687475875943          # канал для приветствий
