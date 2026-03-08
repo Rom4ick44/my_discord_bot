@@ -5,7 +5,6 @@ import json
 import traceback
 import asyncio
 import os
-import requests
 from datetime import datetime, timedelta
 from enum import Enum
 from config import (
@@ -13,8 +12,7 @@ from config import (
     APPLICATION_BUTTON_CHANNEL_ID, APPLICATION_BANNER_URL, VOICE_CHANNEL_ID,
     ROLE_OZON, ROLE_GUEST, ROLE_FAMQ, ROLE_ACADEMY,
     INVITER_ROLE_ID, LEADER_ROLE_ID, DEPUTY_LEADER_ROLE_ID,
-    EMOJI_ACCEPT, EMOJI_REJECT, EMOJI_CALL,
-    TG_BOT_TOKEN, TG_CHAT_ID
+    EMOJI_ACCEPT, EMOJI_REJECT, EMOJI_CALL
 )
 import database as db
 
@@ -48,7 +46,7 @@ async def send_to_channel(channel, embed=None, embeds=None):
 def create_past_apps_text(guild, user_id):
     past_apps = db.get_user_applications(user_id)
     lines = []
-    # Показываем только последние 5 заявок, чтобы не перегружать поле
+    # Показываем только последние 5 заявок
     for app_id, status, date, msg_id in past_apps[:5]:
         if msg_id:
             jump_url = f"https://discord.com/channels/{guild.id}/{REQUEST_CHANNEL_ID}/{msg_id}"
@@ -66,11 +64,8 @@ def create_past_apps_text(guild, user_id):
     text = "\n".join(lines)
     if not text:
         return "Нет"
-
-    # Если всё ещё слишком длинное, обрезаем
     if len(text) > 1024:
         text = text[:1021] + "..."
-
     return text
 
 def is_account_recent(created_at):
@@ -104,7 +99,6 @@ class ApplicationModal(Modal, title="Заявка на вступление"):
         user = interaction.user
         member = guild.get_member(user.id)
 
-        # Embed 1: информация о кандидате
         embed1 = discord.Embed(
             title="📋 НОВАЯ ЗАЯВКА В СЕМЬЮ",
             color=discord.Color.light_gray()
@@ -126,11 +120,9 @@ class ApplicationModal(Modal, title="Заявка на вступление"):
 
         past_apps_text = create_past_apps_text(guild, user.id)
         embed1.add_field(name="**ПРОШЛЫЕ ЗАЯВКИ**", value=past_apps_text, inline=False)
-
         embed1.add_field(name="**СТАТУС ЗАЯВКИ**", value="⏳ Ожидает рассмотрения", inline=False)
         embed1.add_field(name="**РЕЗУЛЬТАТ РАССМОТРЕНИЯ**", value="—", inline=False)
 
-        # Embed 2: ответы на вопросы
         embed2 = discord.Embed(
             title="**ОТВЕТЫ НА ВОПРОСЫ**",
             color=0x2F3136
@@ -159,29 +151,6 @@ class ApplicationModal(Modal, title="Заявка на вступление"):
         await msg.edit(embeds=[embed1, embed2], view=ApplicationButtons(self.bot))
 
         await interaction.response.send_message("✅ Заявка отправлена!", ephemeral=True)
-
-        # Telegram уведомление (используем новые имена переменных)
-        if TG_BOT_TOKEN and TG_CHAT_ID:
-            try:
-                answers_short = answers[:3]
-                answers_text = "\n".join([f"{i+1}. {a}" for i, a in enumerate(answers_short)])
-                text = (
-                    f"<b>📋 Новая заявка!</b>\n"
-                    f"<b>Пользователь:</b> {user.name}\n"
-                    f"<b>ID:</b> {user.id}\n"
-                    f"<b>Ответы:</b>\n{answers_text}\n"
-                    f"<b>Ссылка:</b> {msg.jump_url}"
-                )
-                url = f"https://api.telegram.org/bot{TG_BOT_TOKEN}/sendMessage"
-                payload = {
-                    'chat_id': TG_CHAT_ID,
-                    'text': text,
-                    'parse_mode': 'HTML'
-                }
-                requests.post(url, json=payload, timeout=5)
-                print("✅ Уведомление отправлено в Telegram")
-            except Exception as e:
-                print(f"❌ Ошибка отправки в Telegram: {e}")
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
         await interaction.response.send_message("❌ Ошибка при отправке.", ephemeral=True)
@@ -217,7 +186,6 @@ class ApplicationButtons(View):
         embed1 = message.embeds[0]
         embed2 = message.embeds[1]
         new_embed = discord.Embed.from_dict(embed1.to_dict())
-        # Обновляем поле статуса
         status_found = False
         reviewer_found = False
         for i, field in enumerate(new_embed.fields):
@@ -245,7 +213,6 @@ class ApplicationButtons(View):
         embed1 = message.embeds[0]
         embed2 = message.embeds[1]
         new_embed = discord.Embed.from_dict(embed1.to_dict())
-        # Удаляем старое поле результата через _fields (работаем со словарями)
         new_embed._fields = [f for f in new_embed._fields if f['name'] != "**РЕЗУЛЬТАТ РАССМОТРЕНИЯ**"]
         reviewer = message.guild.get_member(reviewer_id)
         now = datetime.now().strftime("%d.%m.%Y в %H:%M")
@@ -358,7 +325,6 @@ class ApplicationButtons(View):
             if accepted_channel:
                 e1 = discord.Embed.from_dict(message.embeds[0].to_dict())
                 e2 = discord.Embed.from_dict(message.embeds[1].to_dict())
-                # Удаляем старое поле результата, работая со словарями
                 e1._fields = [f for f in e1._fields if f['name'] != "**РЕЗУЛЬТАТ РАССМОТРЕНИЯ**"]
                 now = datetime.now().strftime("%d.%m.%Y в %H:%M")
                 result_value = f"**Рассмотрено:** {interaction.user.mention}\n**Дата:** {now}\n**Статус:** ✅ Принята"
