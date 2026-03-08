@@ -14,7 +14,7 @@ from config import (
     ROLE_OZON, ROLE_GUEST, ROLE_FAMQ, ROLE_ACADEMY,
     INVITER_ROLE_ID, LEADER_ROLE_ID, DEPUTY_LEADER_ROLE_ID,
     EMOJI_ACCEPT, EMOJI_REJECT, EMOJI_CALL,
-    TG_BOT_TOKEN, TG_CHAT_ID  # новые имена
+    TG_BOT_TOKEN, TG_CHAT_ID
 )
 import database as db
 
@@ -48,7 +48,8 @@ async def send_to_channel(channel, embed=None, embeds=None):
 def create_past_apps_text(guild, user_id):
     past_apps = db.get_user_applications(user_id)
     lines = []
-    for app_id, status, date, msg_id in past_apps:
+    # Показываем только последние 5 заявок, чтобы не перегружать поле
+    for app_id, status, date, msg_id in past_apps[:5]:
         if msg_id:
             jump_url = f"https://discord.com/channels/{guild.id}/{REQUEST_CHANNEL_ID}/{msg_id}"
             if status == AppStatus.ACCEPTED.value:
@@ -57,10 +58,20 @@ def create_past_apps_text(guild, user_id):
                 emoji = f"<:reject:{EMOJI_REJECT}>"
             else:
                 emoji = "⏳"
-            lines.append(f"• [#{app_id}]({jump_url}) – {date[:10]} – {status.capitalize()} {emoji}")
+            line = f"• [#{app_id}]({jump_url}) – {date[:10]} – {status.capitalize()} {emoji}"
         else:
-            lines.append(f"• #{app_id} – {date[:10]} – {status.capitalize()}")
-    return "\n".join(lines) if lines else "Нет"
+            line = f"• #{app_id} – {date[:10]} – {status.capitalize()}"
+        lines.append(line)
+
+    text = "\n".join(lines)
+    if not text:
+        return "Нет"
+
+    # Если всё ещё слишком длинное, обрезаем
+    if len(text) > 1024:
+        text = text[:1021] + "..."
+
+    return text
 
 def is_account_recent(created_at):
     return datetime.now().astimezone() - created_at < timedelta(days=30)
