@@ -81,9 +81,11 @@ class PortfolioActionSelect(Select):
             discord.SelectOption(label="Закрепиться", value="pin", description="Закрепиться за портфелем", emoji="📌"),
             discord.SelectOption(label="Открепиться", value="unpin", description="Открепиться от портфеля", emoji="🔓"),
         ]
+        # !!! ВАЖНО: timeout=None делает селект persistent
         super().__init__(placeholder="Выберите действие...", min_values=1, max_values=1, options=options, custom_id="portfolio_action")
 
     async def callback(self, interaction: discord.Interaction):
+        # ... (весь код остается без изменений) ...
         try:
             if not has_access(interaction.user):
                 return await interaction.response.send_message("❌ У вас нет прав для управления портфелями.", ephemeral=True)
@@ -161,9 +163,11 @@ class PortfolioTierSelect(Select):
             discord.SelectOption(label="Тир 2", value="2", description="Установить тир 2"),
             discord.SelectOption(label="Тир 3", value="3", description="Установить тир 3"),
         ]
+        # !!! ВАЖНО: timeout=None делает селект persistent
         super().__init__(placeholder="Выберите тир...", min_values=1, max_values=1, options=options, custom_id="portfolio_tier")
 
     async def callback(self, interaction: discord.Interaction):
+        # ... (весь код остается без изменений) ...
         try:
             if not has_access(interaction.user):
                 return await interaction.response.send_message("❌ У вас нет прав для управления портфелями.", ephemeral=True)
@@ -185,8 +189,9 @@ class PortfolioTierSelect(Select):
             await interaction.response.send_message("❌ Внутренняя ошибка.", ephemeral=True)
 
 
-# ---------- Модальные окна для запросов ----------
+# ---------- Модальные окна для запросов (без изменений) ----------
 class PromotionRequestModal(Modal, title="Запрос повышения"):
+    # ... (весь код оставляем как есть) ...
     def __init__(self, channel_id):
         super().__init__()
         self.channel_id = channel_id
@@ -265,6 +270,7 @@ class VodRequestModal(Modal, title="Запрос разбора отката"):
         ))
 
     async def on_submit(self, interaction: discord.Interaction):
+        # ... (весь код оставляем как есть) ...
         link = self.children[0].value
         description = self.children[1].value or "—"
 
@@ -332,6 +338,7 @@ class GreenRequestModal(Modal, title="Запрос грина"):
         ))
 
     async def on_submit(self, interaction: discord.Interaction):
+        # ... (весь код оставляем как есть) ...
         try:
             amount = int(self.children[0].value)
             level = int(self.children[1].value)
@@ -341,10 +348,8 @@ class GreenRequestModal(Modal, title="Запрос грина"):
         if level not in (1, 2, 3):
             return await interaction.response.send_message("❌ Уровень закладчика должен быть 1, 2 или 3.", ephemeral=True)
 
-        # Сохраняем в БД
         req_id = db.add_green_request(interaction.user.id, amount, level, self.channel_id)
 
-        # Создаём ветку "Развоз грина", если её нет
         thread_name = "Развоз грина"
         existing_thread = None
         for thread in interaction.channel.threads:
@@ -357,7 +362,6 @@ class GreenRequestModal(Modal, title="Запрос грина"):
         else:
             thread_id = existing_thread.id
 
-        # Отправляем в канал запросов грина с пингом хай-рангов
         channel = interaction.guild.get_channel(GREEN_REQUESTS_CHANNEL_ID)
         if not channel:
             return await interaction.response.send_message("❌ Канал для запросов грина не настроен.", ephemeral=True)
@@ -379,7 +383,6 @@ class GreenRequestModal(Modal, title="Запрос грина"):
         view = GreenRequestView(req_id)
         msg = await channel.send(content=content, embed=embed, view=view, allowed_mentions=discord.AllowedMentions(roles=True))
 
-        # Обновляем запись с ID сообщения
         db.update_green_request_message(req_id, msg.id)
 
         await interaction.response.send_message("✅ Запрос отправлен. Ожидайте решения.", ephemeral=True)
@@ -394,10 +397,10 @@ class GreenRequestView(View):
         self.add_item(button)
 
     async def grant_green(self, interaction: discord.Interaction):
+        # ... (весь код оставляем как есть) ...
         if not has_access(interaction.user):
             return await interaction.response.send_message("❌ Недостаточно прав.", ephemeral=True)
 
-        # Получаем данные запроса
         req_data = db.get_green_request(self.req_id)
         if not req_data:
             return await interaction.response.send_message("❌ Запрос не найден.", ephemeral=True)
@@ -406,7 +409,6 @@ class GreenRequestView(View):
 
         db.update_green_request_status(self.req_id, 'granted', interaction.user.id)
 
-        # Логирование в специальный канал
         log_channel = interaction.guild.get_channel(GREEN_LOG_CHANNEL_ID)
         if log_channel:
             embed = discord.Embed(
@@ -419,7 +421,6 @@ class GreenRequestView(View):
             embed.add_field(name="Выдал", value=interaction.user.mention)
             await log_channel.send(embed=embed)
 
-        # Уведомление пользователя в ЛС
         user = interaction.guild.get_member(user_id)
         if user:
             try:
@@ -444,6 +445,7 @@ class PortfolioRequestSelect(Select):
             discord.SelectOption(label="🎥 Разбор отката", value="vod"),
             discord.SelectOption(label="💰 Запрос грина", value="green")
         ]
+        # !!! ВАЖНО: timeout=None делает селект persistent
         super().__init__(placeholder="Выберите запрос...", min_values=1, max_values=1,
                          options=options, custom_id=f"request_select_{channel_id}")
 
@@ -463,6 +465,7 @@ class PortfolioRequestSelect(Select):
 # ---------- Основной View портфеля ----------
 class PortfolioView(View):
     def __init__(self, channel_id):
+        # !!! ВАЖНО: timeout=None делает весь view persistent
         super().__init__(timeout=None)
         self.add_item(PortfolioActionSelect())
         self.add_item(PortfolioTierSelect())
@@ -477,6 +480,7 @@ class CreatePortfolioView(View):
 
     @discord.ui.button(label="📂 Создать портфель", style=discord.ButtonStyle.gray, custom_id="create_portfolio")
     async def create_button_callback(self, interaction: discord.Interaction, button: Button):
+        # ... (весь код оставляем как есть) ...
         await interaction.response.defer(ephemeral=True)
 
         try:
@@ -548,8 +552,10 @@ class CreatePortfolioView(View):
 class Portfolio(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        # !!! ВАЖНО: Регистрируем view глобально
         self.bot.add_view(CreatePortfolioView(self.bot))
-        print("✅ Persistent view для кнопки создания портфеля зарегистрирован")
+        self.bot.add_view(PortfolioView(0))  # Регистрируем основной view с любым channel_id (для persistent)
+        print("✅ Persistent view для портфелей и кнопки создания зарегистрированы")
         self.bot.loop.create_task(self.restore_portfolios())
 
     async def restore_portfolios(self):
@@ -571,6 +577,7 @@ class Portfolio(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member):
+        # ... (код без изменений) ...
         portfolio = db.get_portfolio_by_owner(member.id)
         if portfolio:
             channel = member.guild.get_channel(portfolio[0])
@@ -581,6 +588,7 @@ class Portfolio(commands.Cog):
     @commands.command()
     @commands.has_permissions(administrator=True)
     async def setup_portfolio_panel(self, ctx):
+        # ... (код без изменений) ...
         channel = self.bot.get_channel(PORTFOLIO_CREATION_CHANNEL_ID)
         if not channel:
             return await ctx.send("❌ Канал для панели не найден. Проверьте PORTFOLIO_CREATION_CHANNEL_ID.")
