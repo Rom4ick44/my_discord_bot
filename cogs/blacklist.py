@@ -5,7 +5,7 @@ import traceback
 import asyncio
 from config import (
     BLACKLIST_LOG_CHANNEL_ID, BLACKLIST_PANEL_CHANNEL_ID,
-    ROLE_MODER, LEADER_ROLE_ID, DEPUTY_LEADER_ROLE_ID
+    LEADER_ROLE_ID, DEPUTY_LEADER_ROLE_ID, HIGH_ROLE_ID
 )
 import database as db
 
@@ -29,7 +29,6 @@ class PanelBlacklistModal(Modal, title="Добавление в ЧС"):
 
         async def background():
             if not member:
-                # Если пользователь не на сервере, просто добавляем в БД без уведомления
                 pass
             else:
                 try:
@@ -81,7 +80,6 @@ class PanelRemoveBlacklistModal(Modal, title="Удаление из ЧС"):
 
         member = interaction.guild.get_member(user_id)
 
-        # Мгновенный ответ
         await interaction.response.send_message(f"✅ Пользователь {user_id} удаляется из ЧС...", ephemeral=True)
 
         async def background():
@@ -110,7 +108,7 @@ class BlacklistPanelView(View):
         super().__init__(timeout=None)
 
     def _has_access(self, user):
-        allowed = [ROLE_MODER, LEADER_ROLE_ID, DEPUTY_LEADER_ROLE_ID]
+        allowed = [LEADER_ROLE_ID, DEPUTY_LEADER_ROLE_ID, HIGH_ROLE_ID]
         return any(role in [r.id for r in user.roles] for role in allowed)
 
     @discord.ui.button(label="📋 Добавить в ЧС", style=discord.ButtonStyle.danger, custom_id="blacklist_add")

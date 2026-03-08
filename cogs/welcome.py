@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from datetime import datetime
-from config import WELCOME_CHANNEL_ID, LOG_CHANNEL_ID, REQUEST_CHANNEL_ID, RESULTS_CHANNEL_ID
+from config import WELCOME_CHANNEL_ID, LOG_CHANNEL_ID, REQUEST_CHANNEL_ID
 
 class Welcome(commands.Cog):
     def __init__(self, bot):

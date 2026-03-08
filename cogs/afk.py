@@ -202,33 +202,7 @@ class Afk(commands.Cog):
     async def before_check_afk(self):
         await self.bot.wait_until_ready()
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        if message.author.bot:
-            return
-        # Обработка упоминаний пользователей, которые в AFK
-        if message.mentions:
-            for user in message.mentions:
-                afk_data = db.get_afk(user.id)
-                if afk_data:
-                    start, duration, reason = afk_data
-                    remaining = start + duration - time.time()
-                    if remaining <= 0:
-                        continue
-                    time_left = format_remaining(int(remaining))
-                    try:
-                        embed = discord.Embed(
-                            title="⏳ Пользователь в AFK",
-                            description=f"{user.mention} сейчас в AFK.",
-                            color=discord.Color.orange()
-                        )
-                        embed.add_field(name="Осталось", value=time_left, inline=True)
-                        embed.add_field(name="Причина", value=reason, inline=False)
-                        await message.author.send(embed=embed)
-                    except:
-                        pass
-                    # Можно также отправить в канал, но мы решили только в ЛС
-                    # (согласно ответу на вопрос 6)
+    # Метод on_message удалён по просьбе пользователя
 
     @commands.command()
     @commands.has_permissions(administrator=True)
