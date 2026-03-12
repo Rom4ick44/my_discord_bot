@@ -722,6 +722,35 @@ class Portfolio(commands.Cog):
         await channel.send(embed=embed, view=view)
         await ctx.send("✅ Панель создания портфелей установлена.")
 
+    @commands.command(name='create_portfolio_for', aliases=['cpf'])
+    @commands.has_any_role(*PORTFOLIO_ACCESS_ROLES)  # доступ только ролям из списка
+    async def create_portfolio_for(self, ctx, member: discord.Member):
+    """
+    Создать портфель для указанного участника.
+    Только для кураторов/лидеров.
+    """
+    # Проверяем, нет ли уже портфеля
+    if db.get_portfolio_by_owner(member.id):
+        await ctx.send(f"❌ У пользователя {member.mention} уже есть портфель.")
+        return
+
+    # Определяем ранг пользователя по его ролям
+    rank = get_user_rank(member)
+    if not rank:
+        await ctx.send(f"❌ У пользователя {member.mention} нет ранговой роли (Academy/Reed/Main/High).")
+        return
+
+    # Создаём портфель (функция уже существует)
+    try:
+        channel = await create_portfolio_for_user(ctx.guild, member)
+        if channel:
+            await ctx.send(f"✅ Портфель для {member.mention} создан: {channel.mention}")
+        else:
+            await ctx.send("❌ Не удалось создать портфель (возможно, ошибка при создании канала).")
+    except Exception as e:
+        await ctx.send(f"❌ Ошибка: {e}")
+
+
 async def setup(bot):
     await bot.add_cog(Portfolio(bot))
     print("🎉 Cog Portfolio успешно загружен")
