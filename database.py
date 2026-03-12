@@ -33,7 +33,7 @@ def init_db():
         )
     ''')
     
-    # Таблица настроек (например, открыты ли заявки)
+    # Таблица настроек
     cur.execute('''
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
@@ -42,7 +42,7 @@ def init_db():
     ''')
     cur.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('applications_open', 'true')")
     
-    # Таблица портфелей (личные каналы)
+    # Таблица портфелей с полем created_at
     cur.execute('''
         CREATE TABLE IF NOT EXISTS portfolios (
             channel_id INTEGER PRIMARY KEY,
@@ -119,7 +119,7 @@ def init_db():
         )
     ''')
     
-    # Таблица запросов грина (с полем thread_id)
+    # Таблица запросов грина
     cur.execute('''
         CREATE TABLE IF NOT EXISTS green_requests (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -132,7 +132,7 @@ def init_db():
             granted_at TEXT,
             channel_id INTEGER,
             message_id INTEGER,
-            thread_id INTEGER   -- ID ветки развоза грина
+            thread_id INTEGER
         )
     ''')
     
@@ -289,9 +289,10 @@ def get_portfolio_by_channel(channel_id):
     return row
 
 def get_all_portfolios():
+    """Возвращает список всех портфелей (включая created_at)."""
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    cur.execute("SELECT channel_id, owner_id, rank, tier, pinned_by, thread_rp_id, thread_gang_id FROM portfolios")
+    cur.execute("SELECT channel_id, owner_id, rank, tier, pinned_by, thread_rp_id, thread_gang_id, created_at FROM portfolios")
     rows = cur.fetchall()
     conn.close()
     return rows
@@ -417,11 +418,9 @@ def get_all_vacations():
 def create_or_update_player_stats(user_id, accepted_by=None, accepted_date=None, warns=None, points=None, voice_time=None):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
-    # Сначала проверим, есть ли запись
     cur.execute("SELECT * FROM player_stats WHERE user_id = ?", (user_id,))
     exists = cur.fetchone()
     if exists:
-        # Обновляем только переданные поля
         updates = []
         params = []
         if accepted_by is not None:

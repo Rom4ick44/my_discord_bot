@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
-from datetime import datetime
-from config import WELCOME_CHANNEL_ID, LOG_CHANNEL_ID, REQUEST_CHANNEL_ID
+from config import WELCOME_CHANNEL_ID, LOG_CHANNEL_ID, REQUEST_CHANNEL_ID, ROLE_GUEST
 
 class Welcome(commands.Cog):
     def __init__(self, bot):
@@ -21,24 +20,30 @@ class Welcome(commands.Cog):
 
         guild = member.guild
         request_link = f"https://discord.com/channels/{guild.id}/{REQUEST_CHANNEL_ID}"
-        results_link = f"https://discord.com/channels/{guild.id}/{RESULTS_CHANNEL_ID}"
 
-        await welcome_channel.send(f"{member.mention}")
+        # Выдача роли гостя
+        guest_role = guild.get_role(ROLE_GUEST)
+        if guest_role:
+            await member.add_roles(guest_role, reason="Новый участник")
+        else:
+            print("❌ Роль гостя не найдена")
 
+        # 1. Пинг в спойлере
+        await welcome_channel.send(f"||{member.mention}||")
+
+        # 2. Embed приветствия
         welcome_embed = discord.Embed(
             title=f"**{member.display_name}** присоединился к серверу!",
-            description=(
-                f"Подать заявку в семью можно в канале: [Заявка]({request_link})\n"
-                f"Информация об итогах заявки находится здесь: [Итоги заявок]({results_link})"
-            ),
+            description=f"Подать заявку в семью можно в канале: [Заявка]({request_link})",
             color=0x000000
         )
-        banner_url = "https://cdn.discordapp.com/attachments/.../banner.png"  # замените
+        banner_url = "https://cdn.discordapp.com/attachments/1476263725735346179/1476995652079845447/image.png?ex=69a326e4&is=69a1d564&hm=2de1512ce783425de92c134e30b5b60f7a4844802264f5b8d571793e81573691&"
         welcome_embed.set_image(url=banner_url)
         welcome_embed.set_footer(text=f"Всего участников: {guild.member_count}")
 
         await welcome_channel.send(embed=welcome_embed)
 
+        # 3. Лог
         log_embed = discord.Embed(
             title="🆕 Новый участник",
             description=f"Пользователь {member.mention} присоединился к серверу.",
@@ -48,8 +53,16 @@ class Welcome(commands.Cog):
         log_embed.set_thumbnail(url=member.display_avatar.url)
         log_embed.add_field(name="Имя", value=str(member), inline=True)
         log_embed.add_field(name="ID", value=member.id, inline=True)
-        log_embed.add_field(name="Аккаунт создан", value=discord.utils.format_dt(member.created_at, style='F'), inline=True)
-        log_embed.add_field(name="Присоединился к серверу", value=discord.utils.format_dt(member.joined_at, style='F'), inline=True)
+        log_embed.add_field(
+            name="Аккаунт создан",
+            value=discord.utils.format_dt(member.created_at, style='F'),
+            inline=True
+        )
+        log_embed.add_field(
+            name="Присоединился к серверу",
+            value=discord.utils.format_dt(member.joined_at, style='F'),
+            inline=True
+        )
         log_embed.set_footer(text=f"ID: {member.id}")
 
         await log_channel.send(embed=log_embed)
@@ -57,6 +70,7 @@ class Welcome(commands.Cog):
 
     @commands.command()
     async def testjoin(self, ctx, member: discord.Member = None):
+        """Тест приветствия для указанного пользователя (по умолчанию автор)"""
         if member is None:
             member = ctx.author
         await self.on_member_join(member)
