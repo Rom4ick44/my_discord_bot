@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from config import WELCOME_CHANNEL_ID, LOG_CHANNEL_ID, REQUEST_CHANNEL_ID, ROLE_GUEST
+from config import WELCOME_CHANNEL_ID, LOG_CHANNEL_ID, APPLICATION_BUTTON_CHANNEL_ID, ROLE_GUEST
 
 class Welcome(commands.Cog):
     def __init__(self, bot):
@@ -19,7 +19,7 @@ class Welcome(commands.Cog):
             return
 
         guild = member.guild
-        request_link = f"https://discord.com/channels/{guild.id}/{REQUEST_CHANNEL_ID}"
+        request_link = f"https://discord.com/channels/{guild.id}/{APPLICATION_BUTTON_CHANNEL_ID}"
 
         # Выдача роли гостя
         guest_role = guild.get_role(ROLE_GUEST)

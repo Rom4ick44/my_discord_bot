@@ -42,7 +42,7 @@ def init_db():
     ''')
     cur.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('applications_open', 'true')")
     
-    # Таблица портфелей с полем created_at
+    # Таблица портфелей
     cur.execute('''
         CREATE TABLE IF NOT EXISTS portfolios (
             channel_id INTEGER PRIMARY KEY,
@@ -136,8 +136,70 @@ def init_db():
         )
     ''')
     
+    # ---------- Таблицы мероприятий ----------
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id_info INTEGER NOT NULL,
+            message_id_main INTEGER NOT NULL,
+            message_id_sub INTEGER NOT NULL,
+            channel_id INTEGER NOT NULL,
+            creator_id INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            server TEXT,
+            time TEXT NOT NULL,
+            map TEXT,
+            "limit" INTEGER NOT NULL,
+            group_name TEXT,
+            is_open INTEGER DEFAULT 1,
+            created_at TEXT NOT NULL
+        )
+    ''')
+    
+    # Добавляем недостающие колонки для совместимости со старой БД
+    try:
+        cur.execute("SELECT message_id_info FROM events LIMIT 1")
+    except sqlite3.OperationalError:
+        cur.execute("ALTER TABLE events ADD COLUMN message_id_info INTEGER")
+    try:
+        cur.execute("SELECT message_id_main FROM events LIMIT 1")
+    except sqlite3.OperationalError:
+        cur.execute("ALTER TABLE events ADD COLUMN message_id_main INTEGER")
+    try:
+        cur.execute("SELECT message_id_sub FROM events LIMIT 1")
+    except sqlite3.OperationalError:
+        cur.execute("ALTER TABLE events ADD COLUMN message_id_sub INTEGER")
+    try:
+        cur.execute("SELECT channel_id FROM events LIMIT 1")
+    except sqlite3.OperationalError:
+        cur.execute("ALTER TABLE events ADD COLUMN channel_id INTEGER")
+    
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS event_participants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            role TEXT NOT NULL,
+            FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE
+        )
+    ''')
+    
+    # ---------- Таблица логов ----------
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id INTEGER NOT NULL,
+            user_id INTEGER,
+            action_type TEXT NOT NULL,
+            details TEXT,
+            timestamp TEXT NOT NULL
+        )
+    ''')
+    
     conn.commit()
     conn.close()
+    print("✅ База данных инициализирована (включая таблицы мероприятий и логов)")
 
 # ---------- Чёрный список ----------
 def is_blacklisted(user_id):
@@ -289,7 +351,6 @@ def get_portfolio_by_channel(channel_id):
     return row
 
 def get_all_portfolios():
-    """Возвращает список всех портфелей (включая created_at)."""
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
     cur.execute("SELECT channel_id, owner_id, rank, tier, pinned_by, thread_rp_id, thread_gang_id, created_at FROM portfolios")
@@ -526,3 +587,176 @@ def add_vod_request(user_id, vod_link, description):
     conn.commit()
     conn.close()
     return req_id
+
+# ---------- Мероприятия ----------
+def add_event(message_id_info, message_id_main, message_id_sub, channel_id, creator_id, event_type, title, server, time, map_name, limit_num, group_name):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO events (message_id_info, message_id_main, message_id_sub, channel_id, creator_id, type, title, server, time, map, "limit", group_name, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (message_id_info, message_id_main, message_id_sub, channel_id, creator_id, event_type, title, server, time, map_name, limit_num, group_name, datetime.now().isoformat()))
+    event_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return event_id
+
+def get_event_by_message(message_id):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("SELECT id, creator_id, type, title, server, time, map, \"limit\", group_name, is_open, message_id_info, message_id_main, message_id_sub, channel_id FROM events WHERE message_id_info = ? OR message_id_main = ? OR message_id_sub = ?", (message_id, message_id, message_id))
+    row = cur.fetchone()
+    conn.close()
+    if row:
+        return {'id': row[0], 'creator_id': row[1], 'type': row[2], 'title': row[3],
+                'server': row[4], 'time': row[5], 'map': row[6], 'limit': row[7],
+                'group_name': row[8], 'is_open': row[9],
+                'message_id_info': row[10], 'message_id_main': row[11], 'message_id_sub': row[12],
+                'channel_id': row[13]}
+    return None
+
+def get_event_by_info_message(message_id_info):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("SELECT id, creator_id, type, title, server, time, map, \"limit\", group_name, is_open, message_id_info, message_id_main, message_id_sub, channel_id FROM events WHERE message_id_info = ?", (message_id_info,))
+    row = cur.fetchone()
+    conn.close()
+    if row:
+        return {'id': row[0], 'creator_id': row[1], 'type': row[2], 'title': row[3],
+                'server': row[4], 'time': row[5], 'map': row[6], 'limit': row[7],
+                'group_name': row[8], 'is_open': row[9],
+                'message_id_info': row[10], 'message_id_main': row[11], 'message_id_sub': row[12],
+                'channel_id': row[13]}
+    return None
+
+def update_event(event_id, **kwargs):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    fields = []
+    values = []
+    for key, value in kwargs.items():
+        if value is not None:
+            if key == 'limit':
+                fields.append('"limit" = ?')
+            else:
+                fields.append(f"{key} = ?")
+            values.append(value)
+    if fields:
+        values.append(event_id)
+        cur.execute(f"UPDATE events SET {', '.join(fields)} WHERE id = ?", values)
+        conn.commit()
+    conn.close()
+
+def update_event_messages(event_id, message_id_info=None, message_id_main=None, message_id_sub=None):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    updates = []
+    params = []
+    if message_id_info is not None:
+        updates.append("message_id_info = ?")
+        params.append(message_id_info)
+    if message_id_main is not None:
+        updates.append("message_id_main = ?")
+        params.append(message_id_main)
+    if message_id_sub is not None:
+        updates.append("message_id_sub = ?")
+        params.append(message_id_sub)
+    if updates:
+        params.append(event_id)
+        cur.execute(f"UPDATE events SET {', '.join(updates)} WHERE id = ?", params)
+        conn.commit()
+    conn.close()
+
+def add_participant(event_id, user_id, role):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM event_participants WHERE event_id = ? AND user_id = ?", (event_id, user_id))
+    if cur.fetchone():
+        conn.close()
+        return False
+    cur.execute("INSERT INTO event_participants (event_id, user_id, role) VALUES (?, ?, ?)", (event_id, user_id, role))
+    conn.commit()
+    conn.close()
+    return True
+
+def remove_participant(event_id, user_id):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM event_participants WHERE event_id = ? AND user_id = ?", (event_id, user_id))
+    conn.commit()
+    conn.close()
+
+def get_participants(event_id, role=None):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    if role:
+        cur.execute("SELECT user_id FROM event_participants WHERE event_id = ? AND role = ?", (event_id, role))
+    else:
+        cur.execute("SELECT user_id, role FROM event_participants WHERE event_id = ?", (event_id,))
+    rows = cur.fetchall()
+    conn.close()
+    if role:
+        return [row[0] for row in rows]
+    else:
+        return rows
+
+def count_participants(event_id, role):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM event_participants WHERE event_id = ? AND role = ?", (event_id, role))
+    count = cur.fetchone()[0]
+    conn.close()
+    return count
+
+def clear_participants(event_id, role=None):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    if role:
+        cur.execute("DELETE FROM event_participants WHERE event_id = ? AND role = ?", (event_id, role))
+    else:
+        cur.execute("DELETE FROM event_participants WHERE event_id = ?", (event_id,))
+    conn.commit()
+    conn.close()
+
+def delete_event(event_id):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM events WHERE id = ?", (event_id,))
+    cur.execute("DELETE FROM event_participants WHERE event_id = ?", (event_id,))
+    conn.commit()
+    conn.close()
+
+# ---------- Логи ----------
+def add_log(guild_id, user_id, action_type, details=None):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO logs (guild_id, user_id, action_type, details, timestamp)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (guild_id, user_id, action_type, details, datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+
+def search_logs(guild_id, user_id=None, action_type=None, start_date=None, end_date=None, limit=100):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    query = "SELECT id, user_id, action_type, details, timestamp FROM logs WHERE guild_id = ?"
+    params = [guild_id]
+    if user_id:
+        query += " AND user_id = ?"
+        params.append(user_id)
+    if action_type:
+        query += " AND action_type = ?"
+        params.append(action_type)
+    if start_date:
+        query += " AND timestamp >= ?"
+        params.append(start_date)
+    if end_date:
+        query += " AND timestamp <= ?"
+        params.append(end_date)
+    query += " ORDER BY timestamp DESC LIMIT ?"
+    params.append(limit)
+    cur.execute(query, params)
+    rows = cur.fetchall()
+    conn.close()
+    return rows

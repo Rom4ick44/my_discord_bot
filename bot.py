@@ -7,6 +7,14 @@ from config import TOKEN
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.message_content = True
+intents.members = True
+intents.guilds = True
+intents.bans = True
+intents.moderation = True
+intents.voice_states = True
+intents.messages = True
+intents.guild_messages = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
